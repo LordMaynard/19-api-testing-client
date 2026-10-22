@@ -1,0 +1,402 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner | API Studio</title>
+    <link rel="stylesheet" href="{% static 'tester/css/style.css' %}">
+
+    <style>
+        .runner-content {
+            padding: 24px;
+            max-width: 1200px;
+        }
+
+        .runner-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .runner-card h2 {
+            font-size: 18px;
+            margin: 0 0 18px;
+        }
+
+        .runner-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .runner-form label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 7px;
+        }
+
+        .runner-form input,
+        .runner-form select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font: inherit;
+        }
+
+        .runner-form button,
+        .runner-button {
+            width: fit-content;
+            padding: 11px 17px;
+            border: none;
+            border-radius: 7px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .runner-form button:hover,
+        .runner-button:hover {
+            opacity: 0.9;
+        }
+
+        .runner-inline-form {
+            display: inline;
+        }
+
+        .runner-delete {
+            background: #dc2626;
+            padding: 7px 11px;
+        }
+
+        .assertion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .assertion-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .assertion-item p {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            overflow-wrap: anywhere;
+        }
+
+        .result-item.pass {
+            border-left: 4px solid #16a34a;
+        }
+
+        .result-item.fail {
+            border-left: 4px solid #dc2626;
+        }
+
+        .result-status {
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .result-item.pass .result-status {
+            color: #15803d;
+        }
+
+        .result-item.fail .result-status {
+            color: #b91c1c;
+        }
+
+        .runner-message {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            background: #f1f5f9;
+        }
+
+        .runner-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .runner-stat {
+            padding: 14px 18px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            min-width: 110px;
+        }
+
+        .runner-stat span {
+            color: var(--muted);
+        }
+
+        .runner-stat strong {
+            display: block;
+            font-size: 20px;
+            margin-top: 4px;
+        }
+
+        .muted {
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 700px) {
+            .runner-content {
+                padding: 16px;
+            }
+
+            .runner-card {
+                padding: 17px;
+            }
+
+            .assertion-item {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">⌘</div>
+            <span class="brand-name">API Studio</span>
+        </div>
+
+        <div class="nav-label">Workspace</div>
+
+        <a href="{% url 'home' %}" class="nav-item">
+            ⌘ &nbsp; <span class="nav-text">Request Builder</span>
+        </a>
+
+        <a href="{% url 'collections' %}" class="nav-item">
+            ▤ &nbsp; <span class="nav-text">Collections</span>
+        </a>
+
+        <a href="{% url 'environments' %}" class="nav-item">
+            ◉ &nbsp; <span class="nav-text">Environments</span>
+        </a>
+
+        <a href="{% url 'test_runner' %}" class="nav-item active">
+            ✓ &nbsp; <span class="nav-text">Test Runner</span>
+        </a>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Workspace / Testing</p>
+                <h1>Test Runner</h1>
+                <p class="subtitle">
+                    Create reusable assertions and run them against saved API requests.
+                </p>
+            </div>
+        </header>
+
+        <div class="runner-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="runner-message" role="status">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <section class="runner-card">
+                <h2>1. Select a saved request</h2>
+
+                {% if saved_requests %}
+                    <form method="get" class="runner-form">
+                        <div>
+                            <label for="request_id">Saved request</label>
+                            <select name="request_id" id="request_id" required>
+                                <option value="">Choose a saved request</option>
+
+                                {% for saved in saved_requests %}
+                                    <option
+                                        value="{{ saved.id }}"
+                                        {% if selected_request and selected_request.id == saved.id %}selected{% endif %}
+                                    >
+                                        {{ saved.collection.name }} / {{ saved.name }} ({{ saved.method }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit">Load Request</button>
+                    </form>
+                {% else %}
+                    <p>No saved requests yet. Create a collection and save a request first.</p>
+                    <a href="{% url 'collections' %}">Go to Collections</a>
+                {% endif %}
+            </section>
+
+            {% if selected_request %}
+                <section class="runner-card">
+                    <h2>Selected request</h2>
+                    <p><strong>{{ selected_request.name }}</strong></p>
+                    <p class="muted">
+                        {{ selected_request.method }} · {{ selected_request.url }}
+                    </p>
+                </section>
+
+                <section class="runner-card">
+                    <h2>2. Create an assertion</h2>
+
+                    <form method="post" class="runner-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_assertion">
+                        <input type="hidden" name="saved_request_id" value="{{ selected_request.id }}">
+
+                        <div>
+                            <label for="assertion-name">Assertion name</label>
+                            <input
+                                id="assertion-name"
+                                type="text"
+                                name="name"
+                                placeholder="e.g. Response status is 200"
+                                required
+                            >
+                        </div>
+
+                        <div>
+                            <label for="assertion-type">Assertion type</label>
+                            <select name="assertion_type" id="assertion-type" required>
+                                <option value="status_code">Status code equals</option>
+                                <option value="response_time">Response time is within limit (ms)</option>
+                                <option value="json_path_exists">JSON field exists</option>
+                                <option value="json_path_equals">JSON field equals value</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="json-path">JSON path (for JSON assertions)</label>
+                            <input
+                                id="json-path"
+                                type="text"
+                                name="json_path"
+                                placeholder="e.g. userId or address.city"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="expected-value">Expected value</label>
+                            <input
+                                id="expected-value"
+                                type="text"
+                                name="expected_value"
+                                placeholder="e.g. 200, 2000, or 1"
+                            >
+                        </div>
+
+                        <button type="submit">Add Assertion</button>
+                    </form>
+                </section>
+
+                <section class="runner-card">
+                    <h2>3. Assertions for this request</h2>
+
+                    {% if assertions %}
+                        <div class="assertion-list">
+                            {% for assertion in assertions %}
+                                <div class="assertion-item">
+                                    <div>
+                                        <strong>{{ assertion.name }}</strong>
+                                        <p>
+                                            {{ assertion.get_assertion_type_display }}
+                                            {% if assertion.json_path %} · Path: {{ assertion.json_path }}{% endif %}
+                                            {% if assertion.expected_value %} · Expected: {{ assertion.expected_value }}{% endif %}
+                                        </p>
+                                    </div>
+
+                                    <form method="post" class="runner-inline-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_assertion">
+                                        <input type="hidden" name="assertion_id" value="{{ assertion.id }}">
+                                        <button type="submit" class="runner-button runner-delete">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <form method="post" class="runner-form" style="margin-top: 20px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="run_tests">
+                            <input type="hidden" name="saved_request_id" value="{{ selected_request.id }}">
+                            <button type="submit">▶ Run Tests</button>
+                        </form>
+                    {% else %}
+                        <p class="muted">No assertions yet. Create at least one assertion above.</p>
+                    {% endif %}
+                </section>
+            {% endif %}
+
+            {% if results != None %}
+                <section class="runner-card">
+                    <h2>4. Test Results</h2>
+
+                    <div class="runner-summary">
+                        <div class="runner-stat">
+                            <span>HTTP Status</span>
+                            <strong>{{ response_status }}</strong>
+                        </div>
+
+                        <div class="runner-stat">
+                            <span>Response Time</span>
+                            <strong>{{ response_time }} ms</strong>
+                        </div>
+
+                        <div class="runner-stat">
+                            <span>Assertions</span>
+                            <strong>{{ results|length }}</strong>
+                        </div>
+                    </div>
+
+                    {% for result in results %}
+                        <div class="result-item {% if result.passed %}pass{% else %}fail{% endif %}">
+                            <span class="result-status">
+                                {% if result.passed %}PASS{% else %}FAIL{% endif %}
+                            </span>
+                            <strong>{{ result.name }}</strong>
+                            <p>{{ result.detail }}</p>
+                        </div>
+                    {% empty %}
+                        <p>No assertions were configured for this request.</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+
+            <footer class="footer">API Studio · Built with Django</footer>
+        </div>
+    </main>
+</div>
+</body>
+</html>

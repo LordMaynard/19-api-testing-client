@@ -1,0 +1,224 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collections | API Studio</title>
+    <link rel="stylesheet" href="{% static 'tester/css/style.css' %}">
+    <style>
+        .collections-content {
+            padding: 24px;
+        }
+
+        .collections-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .collection-form,
+        .collection-card {
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: #fff;
+            margin-bottom: 20px;
+        }
+
+        .collection-form {
+            max-width: 600px;
+        }
+
+        .collection-form label {
+            display: block;
+            margin: 16px 0 7px;
+            font-weight: 600;
+        }
+
+        .collection-form input,
+        .collection-form textarea {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font: inherit;
+        }
+
+        .collection-form button {
+            margin-top: 18px;
+            padding: 11px 16px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+        }
+
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit, minmax(240px, 1fr)
+            );
+            gap: 18px;
+        }
+
+        .collection-card h3 {
+            margin-top: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .collection-card p,
+        .collection-count {
+            color: var(--muted);
+        }
+
+        .saved-requests a {
+            overflow-wrap: anywhere;
+        }
+
+        .message {
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            background: #eff6ff;
+        }
+
+        @media (max-width: 600px) {
+            .collections-content {
+                padding: 16px;
+            }
+
+            .collection-form,
+            .collection-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">⌘</div>
+            <span class="brand-name">API Studio</span>
+        </div>
+
+        <div class="nav-label">Workspace</div>
+
+        <a href="{% url 'home' %}" class="nav-item">
+            ⌘ &nbsp; <span class="nav-text">Request Builder</span>
+        </a>
+
+        <a href="{% url 'collections' %}" class="nav-item active">
+            ▤ &nbsp; <span class="nav-text">Collections</span>
+        </a>
+
+        <a href="{% url 'environments' %}" class="nav-item">
+            ◉ &nbsp; <span class="nav-text">Environments</span>
+        </a>
+
+        <a href="{% url 'test_runner' %}" class="nav-item">
+            ✓ &nbsp; <span class="nav-text">Test Runner</span>
+        </a>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Workspace / Request Management</p>
+                <h1>Collections</h1>
+                <p class="subtitle">
+                    Organize your API requests in one place.
+                </p>
+            </div>
+        </header>
+
+        <div class="collections-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message" role="status">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <section class="collection-form">
+                <h2>Create a collection</h2>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <label for="name">Collection name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        maxlength="150"
+                        placeholder="e.g. JSONPlaceholder API"
+                        required
+                    >
+
+                    <label for="description">Description</label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="3"
+                        placeholder="What are these requests for?"
+                    ></textarea>
+
+                    <button type="submit">Create Collection</button>
+                </form>
+            </section>
+
+            <section>
+                <h2>Your collections</h2>
+
+                {% if collections %}
+                    <div class="collection-grid">
+                        {% for collection in collections %}
+                            <article class="collection-card">
+                                <h3>{{ collection.name }}</h3>
+
+                                <p>
+                                    {{ collection.description|default:"No description provided." }}
+                                </p>
+
+                                <div class="collection-count">
+                                    {{ collection.saved_requests.count }}
+                                    saved request{{ collection.saved_requests.count|pluralize }}
+                                </div>
+
+                                <div class="saved-requests">
+                                    <h4>Saved requests</h4>
+
+                                    {% for saved in collection.saved_requests.all %}
+                                        <p>
+                                            <a href="{% url 'home' %}?saved_request={{ saved.id }}">
+                                                {{ saved.name }} ({{ saved.method }})
+                                            </a>
+                                        </p>
+                                    {% empty %}
+                                        <p>No saved requests in this collection yet.</p>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No collections yet. Create your first collection above.</p>
+                {% endif %}
+            </section>
+
+            <footer class="footer">API Studio · Built with Django</footer>
+        </div>
+    </main>
+</div>
+</body>
+</html>

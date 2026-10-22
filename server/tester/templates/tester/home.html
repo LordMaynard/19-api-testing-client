@@ -1,0 +1,423 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Studio</title>
+
+    <link rel="stylesheet" href="{% static 'tester/css/style.css' %}">
+
+    <style>
+
+        .request-tabs {
+            display: flex;
+            gap: 22px;
+            padding: 0 22px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .request-tab {
+            padding: 15px 2px;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .request-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .tab-panel {
+            padding: 22px;
+        }
+
+        .tab-panel[hidden] {
+            display: none;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .editor {
+            width: 100%;
+            min-height: 155px;
+            resize: vertical;
+            border-radius: 8px;
+            background: #f8faff;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .field-help {
+            margin: 9px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .tab-note {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .response-body {
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 600px) {
+            .request-tabs {
+                gap: 16px;
+                padding: 0 16px;
+            }
+
+            .tab-panel {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="app-message {{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">⌘</div>
+            <span class="brand-name">API Studio</span>
+        </div>
+
+        <div class="nav-label">Workspace</div>
+        <div class="nav-item active">⌘ &nbsp; <span class="nav-text">Request Builder</span></div>
+        <a href="{% url 'collections' %}" class="nav-item">
+            ▤ &nbsp; <span class="nav-text">Collections</span>
+        </a>
+
+        <a href="{% url 'environments' %}" class="nav-item">
+            ◉ &nbsp; <span class="nav-text">Environments</span>
+        </a>
+
+        <a href="{% url 'test_runner' %}" class="nav-item">
+            ✓ &nbsp; <span class="nav-text">Test Runner</span>
+        </a>
+        
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Workspace / API Tools</p>
+                <h1>Request Builder</h1>
+                <p class="subtitle">Build requests. Inspect responses. Understand your APIs.</p>
+            </div>
+            <div class="status-pill">● Engine Ready</div>
+        </header>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>New HTTP Request</h2>
+                <p>Configure your method, endpoint, headers and body.</p>
+            </div>
+
+            <form class="request-form" method="POST">
+                {% csrf_token %}
+
+                <div class="request-row">
+                    <select class="method-select" name="method" aria-label="HTTP method">
+                        <option value="GET" {% if selected_method == "GET" %}selected{% endif %}>GET</option>
+                        <option value="POST" {% if selected_method == "POST" %}selected{% endif %}>POST</option>
+                        <option value="PUT" {% if selected_method == "PUT" %}selected{% endif %}>PUT</option>
+                        <option value="PATCH" {% if selected_method == "PATCH" %}selected{% endif %}>PATCH</option>
+                        <option value="DELETE" {% if selected_method == "DELETE" %}selected{% endif %}>DELETE</option>
+                    </select>
+
+                    <input
+                        class="url-input"
+                        type="text"
+                        name="url"
+                        placeholder="https://api.example.com/endpoint"
+                        value="{{ entered_url|default:'' }}"
+                        required
+                    >
+
+                    <button class="send-button" type="submit">➤ Send Request</button>
+                </div>
+
+                <div class="save-request-controls">
+                    <input
+                        type="text"
+                        name="request_name"
+                        placeholder="Request name, e.g. Get All Posts"
+                        value="{{ loaded_request_name|default:'' }}"
+                    >
+
+                    <select name="collection_id" aria-label="Choose collection">
+                        <option value="">Choose a collection</option>
+                        {% for collection in collections %}
+                            <option
+                                value="{{ collection.id }}"
+                                {% if selected_collection_id|stringformat:"s" == collection.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ collection.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <button
+                        type="submit"
+                        formaction="{% url 'save_request' %}"
+                        formmethod="post"
+                        class="save-button"
+                    >
+                        Save Request
+                    </button>
+                </div>
+
+
+                <p class="hint">Try https://jsonplaceholder.typicode.com/posts/1 to test a GET request.</p>
+
+                <div class="request-tabs" role="tablist" aria-label="Request settings">
+                    <button class="request-tab active" type="button" data-tab="params" role="tab" aria-selected="true">Params</button>
+                    <button class="request-tab" type="button" data-tab="headers" role="tab" aria-selected="false">Headers</button>
+                    <button class="request-tab" type="button" data-tab="body" role="tab" aria-selected="false">Body</button>
+                </div>
+
+                
+        <div class="tab-panel" data-panel="params">
+            <p class="tab-note">
+                Add key-value pairs to send query parameters with your request.
+            </p>
+
+            <div class="params-header">
+                <span>KEY</span>
+                <span>VALUE</span>
+                <span></span>
+            </div>
+
+            <div id="params-container">
+                {% for param in params_rows %}
+                    <div class="param-row">
+                        <input
+                            type="text"
+                            name="param_key[]"
+                            placeholder="Parameter name"
+                            value="{{ param.key }}"
+                        >
+                        <input
+                            type="text"
+                            name="param_value[]"
+                            placeholder="Parameter value"
+                            value="{{ param.value }}"
+                        >
+                        <button type="button" class="remove-param">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" id="add-param" class="add-param">
+                + Add Parameter
+            </button>
+
+            <p class="field-help">
+                Example: key <code>userId</code>, value <code>1</code>.
+            </p>
+        </div>
+
+
+                <div class="tab-panel" data-panel="headers" hidden>
+                    <label class="field-label" for="request-headers">Request headers (JSON)</label>
+                    <textarea
+                        class="editor"
+                        id="request-headers"
+                        name="request_headers"
+                        placeholder='{"Accept": "application/json"}'
+                        spellcheck="false"
+                    >{{ request_headers|default:'' }}</textarea>
+                    <p class="field-help">Enter a JSON object. Example: {"Authorization": "Bearer YOUR_TOKEN"}</p>
+                </div>
+
+                <div class="tab-panel" data-panel="body" hidden>
+                    <label class="field-label" for="request-body">Request body (JSON)</label>
+                    <textarea
+                        class="editor"
+                        id="request-body"
+                        name="request_body"
+                        placeholder='{"title": "My test post", "body": "Hello API", "userId": 1}'
+                        spellcheck="false"
+                    >{{ request_body|default:'' }}</textarea>
+                    <p class="field-help">Use valid JSON for POST, PUT, or PATCH requests. Leave empty if no body is needed.</p>
+                </div>
+            </form>
+        </section>
+
+        {% if error %}
+            <section class="panel">
+                <div class="error-message">
+                    <strong>Request failed</strong>
+                    <p>{{ error }}</p>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Response Inspector</h2>
+                <p>Review the result returned by the API.</p>
+            </div>
+
+            {% if status_code %}
+                <div class="response-section">
+                    <div class="response-heading-row">
+                        <h3>Request URL</h3>
+                        <button
+                            type="button"
+                            class="copy-button"
+                            id="copy-url-button"
+                        >
+                            Copy URL
+                        </button>
+                    </div>
+
+                    <pre
+                        class="code-block response-body"
+                        id="final-request-url"
+                    >{{ final_url }}</pre>
+
+                    <p id="copy-url-message" class="copy-message" aria-live="polite"></p>
+                </div>
+                <div class="response-meta">
+                    <span class="meta-chip {% if status_code >= 200 and status_code < 300 %}success{% endif %}">
+                        Status: {{ status_code }}
+                    </span>
+                    <span class="meta-chip">Time: {{ elapsed_time }} ms</span>
+                    <span class="meta-chip">Method: {{ selected_method }}</span>
+                </div>
+
+                <div class="response-section">
+                    <h3>Response Body</h3>
+                    <pre class="code-block response-body">{{ response_body }}</pre>
+                </div>
+
+                <div class="response-section">
+                    <h3>Response Headers</h3>
+                    <pre class="code-block">{{ response_headers|pprint }}</pre>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">⇄</div>
+                    <h3>Your response will appear here</h3>
+                    <p>Send a request to inspect its status code, response time,<br>
+                    headers and body.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <footer class="footer">API Studio · Built with Django</footer>
+    </main>
+</div>
+
+<script>
+    const tabButtons = document.querySelectorAll(".request-tab");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+
+    tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const selectedTab = button.dataset.tab;
+
+            tabButtons.forEach((tab) => {
+                const isActive = tab === button;
+                tab.classList.toggle("active", isActive);
+                tab.setAttribute("aria-selected", String(isActive));
+            });
+
+            tabPanels.forEach((panel) => {
+                panel.hidden = panel.dataset.panel !== selectedTab;
+            });
+        });
+    });
+    
+    const paramsContainer = document.getElementById("params-container");
+    const addParamButton = document.getElementById("add-param");
+
+    addParamButton.addEventListener("click", () => {
+        const row = document.createElement("div");
+        row.className = "param-row";
+
+        row.innerHTML = `
+            <input
+                type="text"
+                name="param_key[]"
+                placeholder="Parameter name"
+                aria-label="Parameter name"
+            >
+
+            <input
+                type="text"
+                name="param_value[]"
+                placeholder="Parameter value"
+                aria-label="Parameter value"
+            >
+
+            <button
+                type="button"
+                class="remove-param"
+                aria-label="Remove parameter"
+            >&times;</button>
+        `;
+
+        paramsContainer.appendChild(row);
+    });
+
+    paramsContainer.addEventListener("click", (event) => {
+        if (event.target.classList.contains("remove-param")) {
+            const rows = paramsContainer.querySelectorAll(".param-row");
+
+            if (rows.length > 1) {
+                event.target.closest(".param-row").remove();
+            } else {
+                const row = event.target.closest(".param-row");
+                row.querySelectorAll("input").forEach((input) => {
+                    input.value = "";
+                });
+            }
+        }
+    });
+
+    const copyUrlButton = document.getElementById("copy-url-button");
+
+    if (copyUrlButton) {
+        copyUrlButton.addEventListener("click", async () => {
+            const urlElement = document.getElementById("final-request-url");
+            const message = document.getElementById("copy-url-message");
+            const url = urlElement.textContent.trim();
+
+            try {
+                await navigator.clipboard.writeText(url);
+                message.textContent = "URL copied successfully.";
+            } catch (error) {
+                message.textContent =
+                    "Copy failed. Select and copy the URL manually.";
+            }
+        });
+    }
+
+</script>
+</body>
+</html>

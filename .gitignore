@@ -1,8 +1,17 @@
 
-node_modules
+node_modules/
 .env
-__pycache__
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
 .DS_Store
 
 # Python virtual environment
 server/.venv/
+
+# Local Django database
+server/db.sqlite3
+
+# Collected static files (generated during deployment)
+server/staticfiles/

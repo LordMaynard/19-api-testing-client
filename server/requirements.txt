@@ -1,0 +1,11 @@
+Django==5.2.11
+djangorestframework==3.16.1
+django-cors-headers==4.9.0
+httpx==0.28.1
+python-dotenv==1.2.1
+gunicorn==23.0.0
+pytest==8.4.2
+pytest-django==4.11.1
+respx==0.22.0
+black==25.9.0
+ruff==0.14.0

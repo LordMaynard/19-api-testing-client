@@ -1,0 +1,419 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environments | API Studio</title>
+    <link rel="stylesheet" href="{% static 'tester/css/style.css' %}">
+    <style>
+        .environment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .environment-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            background: white;
+            min-width: 0;
+        }
+
+        .environment-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        .environment-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .environment-title-row h3 {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .active-label {
+            color: #16803d;
+            background: #eaf8ef;
+            border-radius: 20px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .environment-description {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .environment-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .environment-form input,
+        .environment-form textarea,
+        .environment-form select {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font: inherit;
+            background: white;
+        }
+
+        .environment-form textarea {
+            min-height: 75px;
+            resize: vertical;
+        }
+
+        .environment-form button,
+        .environment-actions button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+        }
+
+        .primary-action {
+            background: var(--primary);
+            color: white;
+        }
+
+        .secondary-action {
+            background: #eef2f7;
+            color: #263244;
+        }
+
+        .danger-action {
+            background: #fff0f0;
+            color: #b42318;
+        }
+
+        .variable-list {
+            display: grid;
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .variable-item {
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 12px;
+            min-width: 0;
+        }
+
+        .variable-item code {
+            display: block;
+            overflow-wrap: anywhere;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .variable-value {
+            color: var(--muted);
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .variable-actions,
+        .environment-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .secret-label {
+            color: #8a5a00;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .empty-variables {
+            color: var(--muted);
+            padding: 14px 0;
+            font-size: 13px;
+        }
+
+        .message-list {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: #edf8f0;
+            color: #176534;
+            font-size: 14px;
+        }
+
+        .message-item.error {
+            background: #fff0f0;
+            color: #a61b1b;
+        }
+
+        .section-spacing {
+            margin-top: 24px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 13px;
+        }
+
+        .checkbox-row input {
+            width: auto;
+        }
+
+        @media (max-width: 600px) {
+            .environment-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">⌘</div>
+            <span class="brand-name">API Studio</span>
+        </div>
+
+        <div class="nav-label">Workspace</div>
+
+        <a href="{% url 'home' %}" class="nav-item">
+            ⌘ &nbsp; <span class="nav-text">Request Builder</span>
+        </a>
+
+        <a href="{% url 'collections' %}" class="nav-item">
+            ▤ &nbsp; <span class="nav-text">Collections</span>
+        </a>
+
+        <a href="{% url 'environments' %}" class="nav-item active">
+            ◉ &nbsp; <span class="nav-text">Environments</span>
+        </a>
+        <a href="{% url 'test_runner' %}" class="nav-item">
+            ✓ &nbsp; <span class="nav-text">Test Runner</span>
+        </a>
+
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Workspace / Configuration</p>
+                <h1>Environments</h1>
+                <p class="subtitle">
+                    Manage API URLs, tokens, and reusable variables.
+                </p>
+            </div>
+            <div class="status-pill">Environment Manager</div>
+        </header>
+
+        {% if messages %}
+            <div class="message-list">
+                {% for message in messages %}
+                    <div class="message-item {% if message.tags == 'error' %}error{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Create an Environment</h2>
+                <p>
+                    Create separate configurations for development, testing,
+                    or production.
+                </p>
+            </div>
+
+            <div style="padding: 22px;">
+                <form method="POST" class="environment-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_environment">
+
+                    <label for="environment-name">Environment name</label>
+                    <input
+                        id="environment-name"
+                        type="text"
+                        name="name"
+                        placeholder="e.g. Development"
+                        maxlength="100"
+                        required
+                    >
+
+                    <label for="environment-description">Description</label>
+                    <textarea
+                        id="environment-description"
+                        name="description"
+                        placeholder="What will you use this environment for?"
+                    ></textarea>
+
+                    <button type="submit" class="primary-action">
+                        + Create Environment
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section class="panel section-spacing">
+            <div class="panel-heading">
+                <h2>Your Environments</h2>
+                <p>
+                    Select an active environment and manage its variables.
+                </p>
+            </div>
+
+            <div style="padding: 22px;">
+                {% if environments %}
+                    <div class="environment-grid">
+                        {% for environment in environments %}
+                            <article class="environment-card {% if environment.is_active %}active{% endif %}">
+                                <div class="environment-title-row">
+                                    <h3>{{ environment.name }}</h3>
+
+                                    {% if environment.is_active %}
+                                        <span class="active-label">ACTIVE</span>
+                                    {% endif %}
+                                </div>
+
+                                <p class="environment-description">
+                                    {{ environment.description|default:"No description provided." }}
+                                </p>
+
+                                {% if not environment.is_active %}
+                                    <form method="POST" class="environment-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="activate_environment">
+                                        <input type="hidden" name="environment_id" value="{{ environment.id }}">
+
+                                        <button type="submit" class="secondary-action">
+                                            Set as Active
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <div class="section-spacing">
+                                    <h4>Variables ({{ environment.variables.count }})</h4>
+
+                                    {% if environment.variables.all %}
+                                        <div class="variable-list">
+                                            {% for variable in environment.variables.all %}
+                                                <div class="variable-item">
+                                                    <code>{{ variable.key }}</code>
+
+                                                    <div class="variable-value">
+                                                        {% if variable.is_secret %}
+                                                            ••••••••
+                                                            <span class="secret-label">SECRET</span>
+                                                        {% else %}
+                                                            {{ variable.value|default:"(empty)" }}
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <div class="variable-actions">
+                                                        <form method="POST">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="action" value="delete_variable">
+                                                            <input type="hidden" name="variable_id" value="{{ variable.id }}">
+
+                                                            <button type="submit" class="danger-action"
+                                                                onclick="return confirm('Delete this variable?');">
+                                                                Delete
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="empty-variables">
+                                            No variables added yet.
+                                        </p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="section-spacing">
+                                    <h4>Add a Variable</h4>
+
+                                    <form method="POST" class="environment-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="add_variable">
+                                        <input type="hidden" name="environment_id" value="{{ environment.id }}">
+
+                                        <input
+                                            type="text"
+                                            name="key"
+                                            placeholder="Variable name, e.g. base_url"
+                                            maxlength="150"
+                                            required
+                                        >
+
+                                        <input
+                                            type="text"
+                                            name="value"
+                                            placeholder="Variable value"
+                                        >
+
+                                        <label class="checkbox-row">
+                                            <input type="checkbox" name="is_secret">
+                                            Mark as secret
+                                        </label>
+
+                                        <button type="submit" class="primary-action">
+                                            + Add Variable
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div class="environment-actions">
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_environment">
+                                        <input type="hidden" name="environment_id" value="{{ environment.id }}">
+
+                                        <button type="submit" class="danger-action"
+                                            onclick="return confirm('Delete this environment and all its variables?');">
+                                            Delete Environment
+                                        </button>
+                                    </form>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">◉</div>
+                        <h3>No environments yet</h3>
+                        <p>Create your first environment above to get started.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <footer class="footer">API Studio · Built with Django</footer>
+    </main>
+</div>
+</body>
+</html>
